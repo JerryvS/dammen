@@ -1,17 +1,22 @@
 import pygame
 from .constanten import grijs, wit, blokgrootte, rijen, zwart, kolommen
 from .schijven import Schijf
+from copy import deepcopy
 
 
-#def print_bord(bord):
-#    for rijindex, rij in enumerate(bord):
-#        print(rijindex, end=' ')
-#        for kolomindex, kolom in enumerate(rij):
-#            if not kolom:
-#                print(' ', end='')
-#            else:
-#                print(kolom.kleur[0], end='')
-#        print()
+def print_bord(bord):
+    for rijindex, rij in enumerate(bord):
+        print(rijindex, end=' ')
+        for kolomindex, kolom in enumerate(rij):
+            if not kolom:
+                print(' ', end='')
+            else:
+                kleur = 'b'
+                if kolom.kleur == wit:
+                    kleur = 'w'
+                print(kleur, end='')
+        print()
+    print()
 
 class Bord:
     def __init__(self):
@@ -44,15 +49,16 @@ class Bord:
 
     def bord_schijven(self, scherm):
         self.vierkant(scherm)
-        #print_bord(self.bord)
         for rij in range(rijen):
             for kolom in range(kolommen):
                 schijf = self.bord[rij][kolom]
                 if schijf != 0:
                     schijf.tekenen(scherm)
 
-    def zet(self, schijf, rij, kolom):
-        self.bord[schijf.rij][schijf.kolom], self.bord[rij][kolom] = self.bord[rij][kolom], self.bord[schijf.rij][schijf.kolom]
+    def zet(self, schijf, rij, kolom, bord=None):
+        if bord == None:
+            bord = self.bord
+        bord[schijf.rij][schijf.kolom], bord[rij][kolom] = bord[rij][kolom], bord[schijf.rij][schijf.kolom]
         schijf.zet(rij, kolom)
         if rij == 0 and schijf.kleur == wit:
             schijf.dam_worden()
@@ -60,89 +66,64 @@ class Bord:
         if rij == rijen - 1 and schijf.kleur == zwart:
             schijf.dam_worden()
             self.dam_zwart += 1
-
-    def maak_schijf(self, rij, kolom):
-        return self.bord[rij][kolom]
+        return bord
 
     def geef_mogelijke_zetten(self, schijf):
-        links = schijf.kolom - 1
-        rechts = schijf.kolom + 1
+        zetten = {}
+        _zetten = {}
+        for y in range(rijen):
+            for x in range(kolommen):
+                _schijf = self.bord[y][x]
+                if _schijf and _schijf.kleur == schijf.kleur:
+                    _zetten.update(self.slaande_zetten(_schijf))
+        if _zetten:
+            max_lengte = 0
+            for zet in _zetten:
+                print(zet)
+                if len(_zetten[zet]) > max_lengte:
+                    max_lengte = len(_zetten[zet])
+            for zet in self.slaande_zetten(schijf):
+                if len(_zetten[zet]) == max_lengte:
+                    zetten.update({zet: _zetten[zet]})
+            return zetten
+        if schijf:
+            if schijf.kleur == wit:
+                richting = [-1]
+            else: 
+                richting = [1]
+            if schijf.dam:
+                richting = [1, -1]
+            for dy in richting:
+                for dx in [1, -1]:
+                    if schijf.kolom+dx < kolommen:
+                        if not self.bord[schijf.rij+dy][schijf.kolom+dx]:
+                            zetten[(schijf.rij+dy, schijf.kolom+dx)] = []
+        return zetten
+
+    def slaande_zetten(self, schijf, geslagen=[], bord=None):
+        if bord == None:
+            bord = self.bord
         rij = schijf.rij
+        kolom = schijf.kolom
         zetten = {}
-        if schijf.kleur == wit:
-            zetten.update(self.links_gaan(rij -1, max(rij -3, -1), -1, schijf.kleur, links))
-            zetten.update(self.rechts_gaan(rij -1, max(rij -3, -1), -1, schijf.kleur, rechts))
-        elif schijf.kleur == zwart:
-            zetten.update(self.links_gaan(rij +1, min(rij +3, rijen), 1, schijf.kleur, links))
-            zetten.update(self.rechts_gaan(rij +1, min(rij +3, rijen), 1, schijf.kleur, rechts))
-        elif schijf.dam:
-            zetten.update(self.links_gaan(rij -1, 0, -1, schijf.kleur, links))
-            zetten.update(self.rechts_gaan(rij -1, 0, -1, schijf.kleur, rechts))
-            zetten.update(self.links_gaan(rij +1, rijen, 1, schijf.kleur, links))
-            zetten.update(self.rechts_gaan(rij +1, rijen, 1, schijf.kleur, rechts))
+        for dy in [1, -1]:
+            for dx in [1, -1]:
+                desty, destx = rij+dy*2, kolom+dx*2
+                if desty < rijen and desty >= 0 and destx < kolommen and destx >= 0:
+                    schijf2 = bord[rij+dy][kolom+dx]
+                    if schijf2 != 0 and (rij+dy, kolom+dx) not in geslagen:
+                        if schijf2.kleur != schijf.kleur and bord[desty][destx] == 0:
+                            tempbord = deepcopy(bord)
+                            tempbord = self.zet(tempbord[rij][kolom], desty, destx, tempbord)
+                            tempbord[rij+dy][kolom+dx] = 0
+                            slaandezetten = self.slaande_zetten(tempbord[desty][destx], geslagen+[(rij+dy, kolom+dx)], tempbord)
+                            zetten.update(slaandezetten)
+                            if not slaandezetten:
+                                zetten[(desty, destx)] = geslagen+[(rij+dy, kolom+dx)]
         return zetten
 
-
-    def rechts_gaan(self, start, stop, stap, kleur, rechts, overgeslagen = []):
-        zetten = {}
-        last = []
-        for r in range(start, stop, stap):
-            if rechts >= kolommen:
-                break
-            huidige = self.bord[r][rechts]
-            if huidige == 0:
-                if not last and overgeslagen:
-                    break
-                elif overgeslagen:
-                    zetten[(r, rechts)] = last + overgeslagen
-                else:
-                    zetten[(r, rechts)] = last
-                if last:
-                    if stap == -1:
-                        rij = max(r -3, 0)
-                    else:
-                        rij = min(r +3, 0)
-                    zetten.update(self.links_gaan(r+stap, rij, stap, kleur, rechts - 1, overgeslagen = last))
-                    zetten.update(self.rechts_gaan(r+stap, rij, stap, kleur, rechts + 1, overgeslagen = last))
-                break
-            elif huidige.kleur == kleur:
-                break
-            else:
-                last = [huidige]
-            rechts += 1
-        return zetten
-
-    def links_gaan(self, start, stop, stap, kleur, links, overgeslagen = []):
-        zetten = {}
-        last = []
-        for r in range(start, stop, stap):
-            if links < 0:
-                break
-            huidige = self.bord[r][links]
-            if huidige == 0:
-                if not last and overgeslagen:
-                    break
-                elif overgeslagen:
-                    zetten[(r, links)] = last + overgeslagen
-                else:
-                    zetten[(r, links)] = last
-                if last:
-                    if stap == -1:
-                        rij = max(r -3, 0)
-                    else:
-                        rij = min(r +3, 0)
-                    zetten.update(self.links_gaan(r+stap, rij, stap, kleur, links - 1, overgeslagen = last))
-                    zetten.update(self.rechts_gaan(r+stap, rij, stap, kleur, links + 1, overgeslagen = last))
-                break
-            elif huidige.kleur == kleur:
-                break
-            else:
-                last = [huidige]
-            links -= 1
-        return zetten
-
-    def verwijder(self, schijven):
-        for schijf in schijven:
+    def verwijder(self, schijf):
+        if schijf != 0:
             self.bord[schijf.rij][schijf.kolom] = 0
             if schijf != 0:
                 if schijf.kleur == wit:

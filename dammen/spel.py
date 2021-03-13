@@ -33,23 +33,28 @@ class Spel:
             resultaat = self._zet(rij, kolom)
             if not resultaat:
                 self.gekozen = None
+                self.mogelijke_zetten = {}
                 self.kiezen(rij, kolom)
         
-        schijf = self.bord.maak_schijf(rij, kolom)
+        schijf = self.bord.bord[rij][kolom]
         if schijf != 0 and schijf.kleur == self.beurt:
             self.gekozen = schijf
             self.mogelijke_zetten = self.bord.geef_mogelijke_zetten(schijf)
+            print(self.mogelijke_zetten)
             return True
         return False
 
     def _zet(self, rij, kolom):
-        schijf = self.bord.maak_schijf(rij, kolom)
-        if self.gekozen and schijf == 0 and (rij, kolom) in self.mogelijke_zetten:
+        if self.gekozen and not self.bord.bord[rij][kolom] and (rij, kolom) in self.mogelijke_zetten:
             self.bord.zet(self.gekozen, rij, kolom)
             overgeslagen = self.mogelijke_zetten[(rij, kolom)]
-            if overgeslagen:
-                self.bord.verwijder(overgeslagen)
-            self.beurtverandering()
+            print(self.mogelijke_zetten)
+            print(overgeslagen)
+            for coords in overgeslagen:
+                print(coords)
+                self.bord.verwijder(self.bord.bord[coords[0]][coords[1]])
+            if not overgeslagen or self.bord.slaande_zetten(self.bord.bord[rij][kolom]) == {}:
+                self.beurtverandering()
         else:
             return False
         return True
@@ -58,7 +63,4 @@ class Spel:
         for zet in zetten:
             rij, kolom = zet
             pygame.draw.circle(self.scherm, lichtgrijs, (kolom * blokgrootte + blokgrootte//2, rij * blokgrootte + blokgrootte//2), 15)
-
-
-
 
