@@ -27,6 +27,9 @@ class Bord:
         self.dam_wit = 0
         self.schijven_plaatsen()
 
+    def is_op_bord(self, y, x):
+        return y < rijen and y >= 0 and x < kolommen and x >= 0
+
     def vierkant(self, scherm):
         scherm.fill(grijs)
         for rij in range(rijen):
@@ -71,55 +74,79 @@ class Bord:
     def geef_mogelijke_zetten(self, schijf):
         zetten = {}
         _zetten = {}
+        # Check voor elke schijf van dezelfde kleur of hij iets kan slaan en voeg die zetten toe aan '_zetten'
         for y in range(rijen):
             for x in range(kolommen):
                 _schijf = self.bord[y][x]
                 if _schijf and _schijf.kleur == schijf.kleur:
                     _zetten.update(self.slaande_zetten(_schijf))
+        # Als er slaande zetten zijn, voeg dan alleen de zetten die de meeste andere stukken pakken toe aan 'zetten'
         if _zetten:
             max_lengte = 0
             for zet in _zetten:
-                print(zet)
                 if len(_zetten[zet]) > max_lengte:
                     max_lengte = len(_zetten[zet])
-            for zet in self.slaande_zetten(schijf):
-                if len(_zetten[zet]) == max_lengte:
-                    zetten.update({zet: _zetten[zet]})
+            schijfzetten = self.slaande_zetten(schijf)
+            for zet in schijfzetten:
+                if len(schijfzetten[zet]) == max_lengte:
+                    zetten.update({zet: schijfzetten[zet]})
             return zetten
-        if schijf:
-            if schijf.kleur == wit:
-                richting = [-1]
-            else: 
-                richting = [1]
-            if schijf.dam:
-                richting = [1, -1]
-            for dy in richting:
-                for dx in [1, -1]:
-                    if schijf.kolom+dx < kolommen:
-                        if not self.bord[schijf.rij+dy][schijf.kolom+dx]:
-                            zetten[(schijf.rij+dy, schijf.kolom+dx)] = []
+        # Als er geen slaande zetten zijn, voeg dan de normale diagonale zetten toe
+        if schijf.kleur == wit:
+            richting = [-1]
+        else: 
+            richting = [1]
+        if schijf.dam:
+            richting = [1, -1]
+        for dy in richting:
+            for dx in [1, -1]:
+                desty, destx = schijf.rij+dy, schijf.kolom+dx
+                if self.is_op_bord(desty, destx) and not self.bord[desty][destx]:
+                    zetten[(desty, destx)] = []
+                if schijf.dam:
+                    while (self.is_op_bord(desty, destx) and not self.bord[desty][destx]):
+                        zetten[(desty, destx)] = []
+                        desty, destx = desty+dy, destx+dx
+
         return zetten
 
-    def slaande_zetten(self, schijf, geslagen=[], bord=None):
+    def slaande_zetten(self, schijf, geslagen=[], bord=None, useddy=None, useddx=None):
         if bord == None:
             bord = self.bord
         rij = schijf.rij
         kolom = schijf.kolom
         zetten = {}
+        # Voor elke richting:
         for dy in [1, -1]:
             for dx in [1, -1]:
-                desty, destx = rij+dy*2, kolom+dx*2
-                if desty < rijen and desty >= 0 and destx < kolommen and destx >= 0:
-                    schijf2 = bord[rij+dy][kolom+dx]
-                    if schijf2 != 0 and (rij+dy, kolom+dx) not in geslagen:
-                        if schijf2.kleur != schijf.kleur and bord[desty][destx] == 0:
-                            tempbord = deepcopy(bord)
-                            tempbord = self.zet(tempbord[rij][kolom], desty, destx, tempbord)
-                            tempbord[rij+dy][kolom+dx] = 0
-                            slaandezetten = self.slaande_zetten(tempbord[desty][destx], geslagen+[(rij+dy, kolom+dx)], tempbord)
-                            zetten.update(slaandezetten)
-                            if not slaandezetten:
-                                zetten[(desty, destx)] = geslagen+[(rij+dy, kolom+dx)]
+                if True:
+                #if -dy != useddy and -dx != useddx:
+                    # hity en hitx zijn de coordinaten van het eventueel geslagen stuk
+                    hity, hitx = rij+dy, kolom+dx
+                    while (self.is_op_bord(hity, hitx)):
+                        hit = bord[hity][hitx]
+                        # Check of de hitschijf van de tegenstander is en niet al geslagen is
+                        if hit != 0 and hit.kleur != schijf.kleur and (hity, hitx) not in geslagen:
+                            # desty en destx zijn de coordinaten van de slaande schijf na zijn zet
+                            desty, destx = hity+dy, hitx+dx
+                            # Als de coordinaten (desty, destx) nog vrij zijn op het bord:
+                            while(self.is_op_bord(desty, destx) and not bord[desty][destx]):
+                                # Voeg de zet toe
+                                zetten[(desty, destx)] = geslagen+[(hity, hitx)]
+                                # Maak een kopie van het bord en doe de zet
+                                tempbord = deepcopy(bord)
+                                tempbord = self.zet(tempbord[rij][kolom], desty, destx, tempbord)
+                                tempbord[hity][hitx] = 0
+                                # Als er nog slaande zetten zijn nadat de zet is gedaan, voeg die dan ook toe (later worden de zetten die de minste stukken slaan eruit gefilterd)
+                                zetten.update(self.slaande_zetten(tempbord[desty][destx], geslagen+[(hity, hitx)], tempbord, dy, dx))
+                                # Als de schijf een dam is, herhaal de stappen dan op het volgende coordinaat
+                                if not schijf.dam:
+                                    break
+                                desty, destx = desty+dy, destx+dx
+                        # Als de schijf een dam is, herhaal de stappen dan op het volgende coordinaat
+                        if not schijf.dam:
+                            break
+                        hity, hitx = hity+dy, hitx+dx
         return zetten
 
     def verwijder(self, schijf):

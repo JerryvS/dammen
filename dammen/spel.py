@@ -40,7 +40,6 @@ class Spel:
         if schijf != 0 and schijf.kleur == self.beurt:
             self.gekozen = schijf
             self.mogelijke_zetten = self.bord.geef_mogelijke_zetten(schijf)
-            print(self.mogelijke_zetten)
             return True
         return False
 
@@ -48,10 +47,7 @@ class Spel:
         if self.gekozen and not self.bord.bord[rij][kolom] and (rij, kolom) in self.mogelijke_zetten:
             self.bord.zet(self.gekozen, rij, kolom)
             overgeslagen = self.mogelijke_zetten[(rij, kolom)]
-            print(self.mogelijke_zetten)
-            print(overgeslagen)
             for coords in overgeslagen:
-                print(coords)
                 self.bord.verwijder(self.bord.bord[coords[0]][coords[1]])
             if not overgeslagen or self.bord.slaande_zetten(self.bord.bord[rij][kolom]) == {}:
                 self.beurtverandering()
