@@ -10,11 +10,6 @@ class Schijf:
         self.rij = rij
         self.kolom = kolom
         self.kleur = kleur
-
-#        if self.kleur == wit:
-#            self.richting = 1
-#        else:
-#            self.richting = -1
         
         self.x = 0
         self.y = 0
@@ -39,5 +34,5 @@ class Schijf:
         self.kolom = kolom
         self.bereken_pos()
 
-    def __rep__(self):
-        return str(self.kleur)
+#    def __rep__(self):
+#        return str(self.kleur)
