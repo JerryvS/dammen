@@ -1,5 +1,5 @@
 import pygame
-from .constanten import zwart, wit, lichtgrijs, blokgrootte
+from .constanten import zwart, wit, lichtgrijs, blokgrootte. breedte, hoogte, zwart_winnaar, wit_winnaar
 from .bord import Bord
 
 class Spel:
