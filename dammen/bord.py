@@ -152,11 +152,10 @@ class Bord:
     def verwijder(self, schijf):
         if schijf != 0:
             self.bord[schijf.rij][schijf.kolom] = 0
-            if schijf != 0:
-                if schijf.kleur == wit:
-                    self.schijf_wit -= 1
-                else:
-                    self.schijf_zwart -= 1
+            if schijf.kleur == wit:
+                self.schijf_wit -= 1
+            else:
+                self.schijf_zwart -= 1
 
     def winnaar(self):
         if self.schijf_zwart <= 0:
