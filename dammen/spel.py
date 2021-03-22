@@ -16,6 +16,10 @@ class Spel:
     def update(self):
         self.bord.bord_schijven(self.scherm)
         self.teken_mogelijke_zetten(self.mogelijke_zetten)
+        if self.bord.winnaar() == zwart:
+            self.scherm.blit(zwart_winnaar, (breedte // 2 - zwart_winnaar.get_width() // 2, hoogte // 2 - zwart_winnaar.get_height() // 2))
+        elif self.bord.winnaar() == wit:
+            self.scherm.blit(wit_winnaar , (breedte // 2 - wit_winnaar.get_width() // 2, hoogte // 2 - wit_winnaar.get_height() // 2))
         pygame.display.update()
 
     def reset(self):
